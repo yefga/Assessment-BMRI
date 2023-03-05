@@ -73,7 +73,7 @@ protocol ListPresenterToInteractorProtocol: AnyObject {
     /// Add here your methods to communicate between PRESENTER -> INTERACTOR
     var presenter: ListInteractorToPresenterProtocol?  { get set }
     func fetch(category: String, page: Int)
-    func getCategories()
+    func getCategories(items: [CategoryModel])
 }
 
 //MARK: Interactor - Output

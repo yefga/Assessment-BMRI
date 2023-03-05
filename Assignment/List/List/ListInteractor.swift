@@ -40,28 +40,21 @@ import AssignmentNetwork
 class ListInteractor: ListPresenterToInteractorProtocol {
     
     weak var presenter: ListInteractorToPresenterProtocol?
+    var network: APIClientProtocol?
+    
+    init(presenter: ListInteractorToPresenterProtocol? = nil, network: APIClientProtocol? = APIClient()) {
+        self.presenter = presenter
+        self.network = network
+    }
+    
     /// Place for Business Logic (ex: Asking Request and get Response from API)
-    func getCategories() {
-        
-        let items: [CategoryModel] = [
-            "business",
-            "entertainment",
-            "general",
-            "health",
-            "science",
-            "sports",
-            "technology"
-        ].map {
-            CategoryModel(name: $0.lowercased(), isSelected:  $0.lowercased() == "general")
-        }
+    func getCategories(items: [CategoryModel]) {
         presenter?.getCategories(items: items)
-        
-        
     }
     
     // MARK: https://newsapi.org/v2/top-headlines?country=id&apiKey=e5184cbd24c24307961254f39621b1f7&page=1&category=general
     func fetch(category: String, page: Int) {
-        APIClient.request(url: NewsAPI.fetch(category: category, page: page),
+        network?.request(url: NewsAPI.fetch(category: category, page: page),
                           forModel: NewsModel.self) { [weak self] result in
             switch result {
             case .failure(let error):

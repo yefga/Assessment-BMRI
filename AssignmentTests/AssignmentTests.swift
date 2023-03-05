@@ -7,30 +7,141 @@
 
 import XCTest
 @testable import Assignment
+@testable import AssignmentNetwork
+import Alamofire
 
-final class AssignmentTests: XCTestCase {
+final class ListInteractorTests: XCTestCase {
 
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
+    var sut: ListInteractor?
+    var mockOutput: ListInteractorOutput?
+    var network: InteractorClient?
+    override func setUp() {
+        sut = ListInteractor()
+        mockOutput = ListInteractorOutput()
+        network = InteractorClient()
+        sut = .init(presenter: mockOutput, network: network)
     }
 
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
+    func testFetchCategoriesEmpty() {
+        sut?.getCategories(items: [])
+        XCTAssertEqual(mockOutput?.categories.isEmpty, true)
     }
-
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // Any test you write for XCTest can be annotated as throws and async.
-        // Mark your test throws to produce an unexpected failure when your test encounters an uncaught error.
-        // Mark your test async to allow awaiting for asynchronous code to complete. Check the results with assertions afterwards.
+    
+    func testFetchCategoriesNotEmpty() {
+        sut?.getCategories(items: [.mock])
+        XCTAssertEqual(mockOutput?.categories.isEmpty, false)
     }
+    
+    func testFetchListSuccess() {
+        network?.isSuccess = true
+        network?.jsonString = """
+        {
+            "status": "ok",
+            "totalResults": 2,
+            "articles": [
+                {
+                    "source": {
+                        "id": "1",
+                        "name": "CNN"
+                    },
+                    "author": "John Doe",
+                    "title": "Breaking News",
+                    "description": "Lorem ipsum dolor sit amet",
+                    "url": "https://www.example.com",
+                    "urlToImage": "https://www.example.com/image.jpg",
+                    "publishedAt": "2023-03-04T07:04:01Z",
+                    "content": "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+                },
+                {
+                    "source": {
+                        "id": "2",
+                        "name": "BBC"
+                    },
+                    "author": "Jane Smith",
+                    "title": "World News",
+                    "description": null,
+                    "url": "https://www.example.com/world-news",
+                    "urlToImage": null,
+                    "publishedAt": "2023-03-04T07:04:01Z",
+                    "content": "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium."
+                }
+            ]
+        }
 
-    func testPerformanceExample() throws {
-        // This is an example of a performance test case.
-        self.measure {
-            // Put the code you want to measure the time of here.
+        """
+        sut?.fetch(category: "Something", page: 1)
+        XCTAssertEqual(network?.isSuccess, true)
+        XCTAssertEqual(mockOutput?.articles.isEmpty, false)
+        XCTAssertEqual(mockOutput?.totalCounts, 2)
+    }
+    
+    func testFetchListFailed() {
+        network?.isSuccess = false
+        sut?.fetch(category: "Something", page: 1)
+        XCTAssertEqual(network?.isSuccess, false)
+        XCTAssertEqual(mockOutput?.articles.isEmpty, true)
+        XCTAssertEqual(mockOutput?.totalCounts, 0)
+    }
+    
+    override func tearDown() {
+        sut = nil
+        mockOutput = nil
+        network = nil
+    }
+}
+
+extension String {
+    func decode<T: Codable>(model: T.Type) -> T? {
+        guard let data = self.data(using: .utf8) else {
+            return nil
+        }
+        let decoder = JSONDecoder()
+        do {
+            let object = try decoder.decode(model, from: data)
+            return object
+        } catch {
+            print("Error decoding JSON string: \(error.localizedDescription)")
+            return nil
         }
     }
+}
 
+
+
+class InteractorClient: APIClientProtocol {
+    var isSuccess: Bool = false
+    var jsonString: String = ""
+    
+    func request<T: Codable>(url: URLRequestConvertible,
+                    forModel model: T.Type,
+                    completion: @escaping ((Result<T, Error>) -> Void)) where T : Decodable, T : Encodable {
+        print(jsonString)
+        if isSuccess, let decoded = jsonString.decode(model: model) {
+            completion(.success(decoded))
+        } else {
+            completion(.failure(APIError.decodeFailed))
+        }
+    }
+}
+
+class ListInteractorOutput: ListInteractorToPresenterProtocol {
+    
+    var categories: [CategoryModel] = []
+    var articles: [ArticleModel?] = []
+    var totalCounts: Int = 0
+    var errorArticles: String?
+    
+    func getCategories(items: [CategoryModel]) {
+        self.categories = items
+    }
+    
+    func getArticles(items: [ArticleModel?], totalCount: Int) {
+        self.articles = items
+        self.totalCounts = totalCount
+    }
+    
+    func getArticlesError(message: String?) {
+        self.errorArticles = message
+    }
+    
 }

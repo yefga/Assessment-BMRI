@@ -72,7 +72,17 @@ class ListPresenter: ListViewToPresenterProtocol {
     }
     
     func getCategories() {
-        interactor?.getCategories()
+        interactor?.getCategories(items: [
+            "business",
+            "entertainment",
+            "general",
+            "health",
+            "science",
+            "sports",
+            "technology"
+        ].map {
+            CategoryModel(name: $0.lowercased(), isSelected:  $0.lowercased() == "general")
+        })
     }
     
     func loadMore() {

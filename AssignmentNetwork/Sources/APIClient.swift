@@ -8,8 +8,18 @@
 import Foundation
 import Alamofire
 
-public final class APIClient {
-    public static func request<T: Codable>(
+public protocol APIClientProtocol {
+    func request<T: Codable>(
+        url: URLRequestConvertible,
+        forModel model: T.Type,
+        completion: @escaping ((Result<T, Error>) -> Void)
+    )
+}
+
+public final class APIClient: APIClientProtocol {
+    public init() {}
+    
+    public func request<T: Codable>(
         url: URLRequestConvertible,
         forModel model: T.Type,
         completion: @escaping ((Result<T, Error>) -> Void)
@@ -17,6 +27,7 @@ public final class APIClient {
     
         let manager = Session.default
         let request = manager.request(url)
+        
         request
             .validate()
             .response { response in
