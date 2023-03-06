@@ -40,9 +40,4 @@ class NewsInteractor: NewsPresenterToInteractorProtocol {
     
     weak var presenter: NewsInteractorToPresenterProtocol?
     
-    /// Place for Business Logic (ex: Asking Request and get Response from API)
-    func fetchNews(result: String) {
-        
-    }
-    
 }
